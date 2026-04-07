@@ -1,7 +1,23 @@
-.DS_Store
+# Python
+__pycache__/
 *.pyc
-*.egg-info
+*.pyo
+*.pyd
+
+# Egg info
+*.egg-info/
+
+# Env
+env/
+venv/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
 *.swp
 tags
 node_modules
-__pycache__
