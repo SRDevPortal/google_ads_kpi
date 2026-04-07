@@ -5,6 +5,10 @@ app_description = "Google Ads integration"
 app_email = "admin@example.com"
 app_license = "mit"
 
+fixtures = [
+    {"dt": "Workspace", "filters": [["name", "in", ["Google Ads KPI"]]]}
+]
+
 # Apps
 # ------------------
 
