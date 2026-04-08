@@ -24,7 +24,7 @@ def create_doctypes():
                 {"fieldname": "cost", "label": "Cost", "fieldtype": "Currency", "in_list_view": 1},
                 {"fieldname": "conversions", "label": "Conversions", "fieldtype": "Float", "in_list_view": 1},
                 {"fieldname": "revenue", "label": "Revenue", "fieldtype": "Currency"},
-                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "CRM Lead Source", "in_list_view": 1}
+                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "SR Lead Source", "in_list_view": 1}
             ]
         },
         {
@@ -38,7 +38,7 @@ def create_doctypes():
                 {"fieldname": "clicks", "label": "Clicks", "fieldtype": "Int", "in_list_view": 1},
                 {"fieldname": "cost", "label": "Cost", "fieldtype": "Currency", "in_list_view": 1},
                 {"fieldname": "conversions", "label": "Conversions", "fieldtype": "Float", "in_list_view": 1},
-                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "CRM Lead Source", "in_list_view": 1}
+                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "SR Lead Source", "in_list_view": 1}
             ]
         },
         {
@@ -50,7 +50,7 @@ def create_doctypes():
                 {"fieldname": "clicks", "label": "Clicks", "fieldtype": "Int", "in_list_view": 1},
                 {"fieldname": "cost", "label": "Cost", "fieldtype": "Currency", "in_list_view": 1},
                 {"fieldname": "conversions", "label": "Conversions", "fieldtype": "Float", "in_list_view": 1},
-                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "CRM Lead Source", "in_list_view": 1}
+                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "SR Lead Source", "in_list_view": 1}
             ]
         },
         {
@@ -62,7 +62,7 @@ def create_doctypes():
                 {"fieldname": "clicks", "label": "Clicks", "fieldtype": "Int", "in_list_view": 1},
                 {"fieldname": "cost", "label": "Cost", "fieldtype": "Currency", "in_list_view": 1},
                 {"fieldname": "conversions", "label": "Conversions", "fieldtype": "Float", "in_list_view": 1},
-                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "CRM Lead Source", "in_list_view": 1}
+                {"fieldname": "source", "label": "Source", "fieldtype": "Link", "options": "SR Lead Source", "in_list_view": 1}
             ]
         }
     ]
