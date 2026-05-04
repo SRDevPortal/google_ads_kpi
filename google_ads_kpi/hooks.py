@@ -92,8 +92,9 @@ doctype_list_js = {
 # Installation
 # ------------
 
-# before_install = "google_ads_kpi.install.before_install"
-# after_install = "google_ads_kpi.install.after_install"
+before_install = "google_ads_kpi.install.before_install"
+after_install = "google_ads_kpi.install.after_install"
+after_migrate = "google_ads_kpi.install.after_migrate"
 
 # Uninstallation
 # ------------
