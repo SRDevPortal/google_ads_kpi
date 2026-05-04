@@ -134,9 +134,10 @@
         },
   {
    "fieldname": "source",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Source",
+   "options": "Lead Source",
    "read_only": 1
   }
     ],

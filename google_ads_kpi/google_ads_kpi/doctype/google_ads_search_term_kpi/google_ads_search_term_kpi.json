@@ -92,9 +92,10 @@
         },
   {
    "fieldname": "source",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Source"
+   "label": "Source",
+   "options": "Lead Source"
   }
     ],
     "grid_page_length": 50,

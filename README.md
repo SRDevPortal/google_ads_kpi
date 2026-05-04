@@ -14,8 +14,8 @@ bench install-app google_ads_kpi
 
 ### Compatibility
 
-- Supports Frappe `15.x` and `16.x`.
-- Does not require ERPNext. Google Ads `source` values are stored as plain text so the app can install on plain Frappe sites.
+- Supports Frappe/ERPNext `15.x` and `16.x`.
+- Requires ERPNext because Google Ads KPI `source` fields link to `Lead Source`.
 - AI actions and pipeline writes are restricted to `System Manager`.
 - Optional OpenAI answers use `openai_api_key` from site config. Without it, the app falls back to rule-based responses.
 
