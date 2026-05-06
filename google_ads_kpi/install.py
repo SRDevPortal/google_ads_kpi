@@ -4,6 +4,10 @@ import frappe
 
 
 WORKSPACE_NAME = "Google Ads KPI"
+WORKSPACE_LABEL = "Google Ads KPI"
+WORKSPACE_TITLE = "Google Ads KPI"
+WORKSPACE_MODULE = "Google Ads KPI"
+LEGACY_WORKSPACE_NAMES = ("Google Ads", "Google Ads Dashboard")
 
 WORKSPACE_CONTENT = (
     '[{"id":"zWLLv","type":"header","data":{"text":"Google Ads KPI","col":12}},'
@@ -81,12 +85,16 @@ def before_install() -> None:
 def after_install() -> None:
     ensure_ai_settings_defaults()
     ensure_workspace()
-    frappe.clear_cache()
+    clear_google_ads_cache()
 
 
 def after_migrate() -> None:
     ensure_ai_settings_defaults()
     ensure_workspace()
+    clear_google_ads_cache()
+
+
+def clear_google_ads_cache() -> None:
     frappe.clear_cache(doctype="Google Ads AI Settings")
     frappe.clear_cache(doctype="Google Ads Campaign KPI")
     frappe.clear_cache(doctype="Workspace")
@@ -111,19 +119,23 @@ def ensure_workspace() -> None:
     if not frappe.db.exists("DocType", "Workspace"):
         return
 
+    migrate_legacy_workspace()
+    release_duplicate_workspace_label()
+
     if not frappe.db.exists("Workspace", WORKSPACE_NAME):
         workspace = frappe.get_doc(
             {
                 "doctype": "Workspace",
                 "name": WORKSPACE_NAME,
-                "label": WORKSPACE_NAME,
-                "title": WORKSPACE_NAME,
-                "module": WORKSPACE_NAME,
+                "label": WORKSPACE_LABEL,
+                "title": WORKSPACE_TITLE,
+                "module": WORKSPACE_MODULE,
                 "public": 1,
+                "is_hidden": 0,
                 "icon": "chart",
+                "content": WORKSPACE_CONTENT,
             }
         )
-        workspace.content = WORKSPACE_CONTENT
         for shortcut in WORKSPACE_SHORTCUTS:
             workspace.append("shortcuts", shortcut)
         workspace.insert(ignore_permissions=True)
@@ -133,10 +145,11 @@ def ensure_workspace() -> None:
         "Workspace",
         WORKSPACE_NAME,
         {
-            "label": WORKSPACE_NAME,
-            "title": WORKSPACE_NAME,
-            "module": WORKSPACE_NAME,
+            "label": WORKSPACE_LABEL,
+            "title": WORKSPACE_TITLE,
+            "module": WORKSPACE_MODULE,
             "public": 1,
+            "is_hidden": 0,
             "icon": "chart",
             "content": WORKSPACE_CONTENT,
         },
@@ -163,3 +176,64 @@ def ensure_workspace() -> None:
             }
         )
         row.db_insert()
+
+
+def migrate_legacy_workspace() -> None:
+    for workspace_name in LEGACY_WORKSPACE_NAMES:
+        if workspace_name == WORKSPACE_NAME or not frappe.db.exists("Workspace", workspace_name):
+            continue
+
+        if not frappe.db.exists("Workspace", WORKSPACE_NAME):
+            frappe.rename_doc(
+                "Workspace",
+                workspace_name,
+                WORKSPACE_NAME,
+                force=True,
+            )
+            return
+
+        frappe.db.set_value(
+            "Workspace",
+            workspace_name,
+            {
+                "label": get_legacy_workspace_label(workspace_name),
+                "is_hidden": 1,
+                "public": 0,
+            },
+            update_modified=False,
+        )
+
+
+def release_duplicate_workspace_label() -> None:
+    duplicate_workspaces = frappe.get_all(
+        "Workspace",
+        filters={"label": WORKSPACE_LABEL, "name": ["!=", WORKSPACE_NAME]},
+        pluck="name",
+    )
+
+    for workspace_name in duplicate_workspaces:
+        frappe.db.set_value(
+            "Workspace",
+            workspace_name,
+            {
+                "label": get_legacy_workspace_label(workspace_name),
+                "is_hidden": 1,
+                "public": 0,
+            },
+            update_modified=False,
+        )
+
+
+def get_legacy_workspace_label(workspace_name: str) -> str:
+    base_label = f"{workspace_name} Legacy"
+    label = base_label
+    counter = 2
+
+    while frappe.db.exists(
+        "Workspace",
+        {"label": label, "name": ["!=", workspace_name]},
+    ):
+        label = f"{base_label} {counter}"
+        counter += 1
+
+    return label

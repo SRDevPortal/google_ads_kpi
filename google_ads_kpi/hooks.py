@@ -1,18 +1,18 @@
 app_name = "google_ads_kpi"
 app_title = "Google Ads KPI"
-app_publisher = "SRIAAS"
+app_publisher = "Publisher"
 app_description = "Google Ads integration"
 app_email = "admin@example.com"
-app_license = "MIT"
+app_license = "mit"
 
-# Workspace is exported as a standard app document under
-# google_ads_kpi/workspace/google_ads_kpi/google_ads_kpi.json.
-fixtures = []
+fixtures = [
+    {"dt": "Workspace", "filters": [["name", "in", ["Google Ads KPI"]]]}
+]
 
 # Apps
 # ------------------
 
-required_apps = ["erpnext"]
+# required_apps = []
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [
@@ -240,4 +240,3 @@ scheduler_events = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-

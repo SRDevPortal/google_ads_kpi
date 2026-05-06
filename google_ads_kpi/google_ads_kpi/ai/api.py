@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import frappe
 from frappe.utils import flt, now
 
@@ -13,30 +15,7 @@ from google_ads_kpi.google_ads_kpi.ai.llm_analyst import (
 from google_ads_kpi.google_ads_kpi.ai.recommendations import rank_recommendations
 
 
-MANAGER_ROLE = "System Manager"
-
-
-def _require_manager() -> None:
-    frappe.only_for(MANAGER_ROLE)
-
-
-def _existing_recommendation(item: dict) -> str | None:
-    return frappe.db.get_value(
-        "Google Ads AI Recommendation",
-        {
-            "campaign_id": item.get("campaign_id"),
-            "action_type": item.get("action_type"),
-            "status": "Draft",
-        },
-        "name",
-    )
-
-
 def _create_recommendation_doc(item: dict) -> str:
-    existing = _existing_recommendation(item)
-    if existing:
-        return existing
-
     doc = frappe.get_doc(
         {
             "doctype": "Google Ads AI Recommendation",
@@ -79,7 +58,6 @@ def run_ai_pipeline(
     google_ads_account: str | None = None,
     campaign_name: str | None = None,
 ) -> dict:
-    _require_manager()
     use_filters = (filter_mode or "all") == "filtered"
     dataset = get_training_dataset(
         days=int(days),
@@ -108,7 +86,6 @@ def run_ai_pipeline(
 
 @frappe.whitelist()
 def ask_ai_analyst(question: str) -> dict:
-    _require_manager()
     pipeline = run_ai_pipeline(days=90, horizon_days=7, persist_recommendations=0)
     return answer_question(question, pipeline)
 
@@ -120,7 +97,6 @@ def smoke_ai_analyst() -> dict:
 
 @frappe.whitelist()
 def create_sample_recommendations() -> dict:
-    _require_manager()
     samples = [
         {
             "campaign_id": "SAMPLE-1001",
@@ -153,7 +129,6 @@ def create_sample_recommendations() -> dict:
 
 @frappe.whitelist()
 def get_ai_verification_snapshot() -> dict:
-    _require_manager()
     recommendations = frappe.get_all(
         "Google Ads AI Recommendation",
         fields=["name", "campaign_id", "status", "reviewer_notes"],
@@ -171,7 +146,6 @@ def get_ai_verification_snapshot() -> dict:
 
 @frappe.whitelist()
 def run_sample_audit_flow() -> dict:
-    _require_manager()
     approved = frappe.db.get_value(
         "Google Ads AI Recommendation",
         {"campaign_id": "SAMPLE-1001"},
@@ -193,7 +167,6 @@ def run_sample_audit_flow() -> dict:
 
 @frappe.whitelist()
 def approve_recommendation(recommendation_name: str, notes: str | None = None) -> dict:
-    _require_manager()
     rec = frappe.get_doc("Google Ads AI Recommendation", recommendation_name)
     rec.status = "Approved"
     rec.reviewer_notes = notes
@@ -204,7 +177,6 @@ def approve_recommendation(recommendation_name: str, notes: str | None = None) -
 
 @frappe.whitelist()
 def reject_recommendation(recommendation_name: str, notes: str | None = None) -> dict:
-    _require_manager()
     rec = frappe.get_doc("Google Ads AI Recommendation", recommendation_name)
     rec.status = "Rejected"
     rec.reviewer_notes = notes
@@ -215,7 +187,6 @@ def reject_recommendation(recommendation_name: str, notes: str | None = None) ->
 
 @frappe.whitelist()
 def apply_recommendation(recommendation_name: str) -> dict:
-    _require_manager()
     rec = frappe.get_doc("Google Ads AI Recommendation", recommendation_name)
     settings = frappe.get_single("Google Ads AI Settings")
     if not settings.auto_execution_enabled:
@@ -236,7 +207,6 @@ def configure_ai_settings(
     risk_tolerance: str = "medium",
     auto_execution_enabled: int = 0,
 ) -> dict:
-    _require_manager()
     settings = frappe.get_single("Google Ads AI Settings")
     settings.objective = objective
     settings.risk_tolerance = risk_tolerance
@@ -260,20 +230,29 @@ def get_kpi_filter_options() -> dict:
     )
     campaign_rows = frappe.get_all(
         "Google Ads Campaign KPI",
-        fields=["campaign_name"],
-        filters={"campaign_name": ["is", "set"]},
-        group_by="campaign_name",
-        order_by="campaign_name asc",
+        fields=["google_ads_account", "campaign_name"],
+        filters={"google_ads_account": ["is", "set"], "campaign_name": ["is", "set"]},
+        order_by="google_ads_account asc, campaign_name asc",
     )
+    account_campaigns_map: dict[str, list[str]] = {}
+    for row in campaign_rows:
+        account = (row.get("google_ads_account") or "").strip()
+        campaign = (row.get("campaign_name") or "").strip()
+        if not account or not campaign:
+            continue
+        account_campaigns_map.setdefault(account, [])
+        if campaign not in account_campaigns_map[account]:
+            account_campaigns_map[account].append(campaign)
+
     return {
         "google_ads_accounts": [row.get("google_ads_account") for row in account_rows if row.get("google_ads_account")],
-        "campaign_names": [row.get("campaign_name") for row in campaign_rows if row.get("campaign_name")],
+        "campaign_names": sorted({row.get("campaign_name") for row in campaign_rows if row.get("campaign_name")}),
+        "account_campaigns_map": account_campaigns_map,
     }
 
 
 @frappe.whitelist()
 def ask_recommendation_ai(recommendation_name: str, question: str) -> dict:
-    _require_manager()
     rec = frappe.get_doc("Google Ads AI Recommendation", recommendation_name)
     context = {
         "recommendation_name": rec.name,
@@ -293,15 +272,35 @@ def ask_recommendation_ai(recommendation_name: str, question: str) -> dict:
 
 @frappe.whitelist()
 def ask_campaign_ai(
-    campaign_name: str,
     question: str,
+    campaign_name: str | None = None,
+    campaign_names: list[str] | str | None = None,
     google_ads_account: str | None = None,
     days: int = 60,
 ) -> dict:
-    _require_manager()
-    filters = {"campaign_name": campaign_name}
+    filters = {}
     if google_ads_account:
         filters["google_ads_account"] = google_ads_account
+    selected_campaign_names: list[str] = []
+    if campaign_names:
+        parsed = campaign_names
+        if isinstance(campaign_names, str):
+            try:
+                parsed = frappe.parse_json(campaign_names)
+            except Exception:
+                try:
+                    parsed = json.loads(campaign_names)
+                except Exception:
+                    parsed = [item.strip() for item in campaign_names.split(",") if item.strip()]
+        if isinstance(parsed, list):
+            selected_campaign_names = [str(item).strip() for item in parsed if str(item).strip()]
+
+    analyze_all_campaigns = (campaign_name or "").strip().lower() in {"all", "*"}
+    if selected_campaign_names:
+        filters["campaign_name"] = ["in", selected_campaign_names]
+        analyze_all_campaigns = False
+    elif not analyze_all_campaigns and (campaign_name or "").strip():
+        filters["campaign_name"] = (campaign_name or "").strip()
 
     rows = frappe.get_all(
         "Google Ads Campaign KPI",
@@ -311,7 +310,8 @@ def ask_campaign_ai(
         limit=max(14, int(days)),
     )
     if not rows:
-        frappe.throw("No Google Ads campaign KPI records found for the selected campaign/account.")
+        scope = "selected account" if analyze_all_campaigns else "selected campaign/account"
+        frappe.throw(f"No Google Ads campaign KPI records found for {scope}.")
 
     recent = rows[:7]
     previous = rows[7:14]
@@ -354,7 +354,8 @@ def ask_campaign_ai(
     ]
 
     context = {
-        "campaign_name": campaign_name,
+        "campaign_name": "All Campaigns" if analyze_all_campaigns else (campaign_name or ""),
+        "selected_campaign_names": selected_campaign_names,
         "google_ads_account": google_ads_account,
         "records_used": len(rows),
         "recent_7_days": recent_summary,
@@ -363,3 +364,4 @@ def ask_campaign_ai(
         "latest_daily_points": latest_points,
     }
     return answer_contextual_question(question, context, "You are a senior Google Ads campaign performance analyst.")
+
