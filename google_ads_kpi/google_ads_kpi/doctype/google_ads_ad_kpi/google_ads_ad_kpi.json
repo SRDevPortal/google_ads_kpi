@@ -74,10 +74,9 @@
         },
         {
             "fieldname": "source",
-            "fieldtype": "Link",
+            "fieldtype": "Data",
             "in_list_view": 1,
-            "label": "Source",
-            "options": "SR Lead Source"
+            "label": "Source"
         }
     ],
     "grid_page_length": 50,

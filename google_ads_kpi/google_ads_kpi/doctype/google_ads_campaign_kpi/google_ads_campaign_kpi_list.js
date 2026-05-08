@@ -13,14 +13,14 @@ frappe.listview_settings["Google Ads Campaign KPI"] = {
 						return;
 					}
 
-					openGoogleAISelector(accountOptions, accountCampaignsMap);
+					openGoogleAISelector(accountOptions, accountCampaignsMap, data.campaign_names || []);
 				},
 			});
 		});
 	},
 };
 
-function openGoogleAISelector(accountOptions, accountCampaignsMap) {
+function openGoogleAISelector(accountOptions, accountCampaignsMap, fallbackCampaignNames = []) {
 	const dialog = new frappe.ui.Dialog({
 		title: "Ask AI Campaign Analyst",
 		fields: [
@@ -83,7 +83,10 @@ function openGoogleAISelector(accountOptions, accountCampaignsMap) {
 	});
 
 	const refreshCampaignOptions = (account) => {
-		const campaigns = (accountCampaignsMap[account] || []).filter(Boolean);
+		const accountKey = String(account || "").trim();
+		const campaignsForAccount = accountCampaignsMap[accountKey] || accountCampaignsMap[account] || [];
+		const sourceCampaigns = campaignsForAccount.length ? campaignsForAccount : fallbackCampaignNames;
+		const campaigns = [...new Set((sourceCampaigns || []).filter(Boolean).map((item) => String(item).trim()))];
 		const options = ["All", ...campaigns];
 		dialog.set_df_property("campaign_name", "options", options.join("\n"));
 		dialog.set_value("campaign_name", options[0] || "All");
